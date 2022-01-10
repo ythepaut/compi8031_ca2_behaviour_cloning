@@ -6,15 +6,14 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.image as mpimg
 from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import Dense, Flatten, Convolution2D, MaxPooling2D, Dropout
+from tensorflow.keras.layers import Dense, Flatten, Convolution2D, Dropout
 from tensorflow.keras.optimizers import Adam
 from sklearn.utils import shuffle
 from sklearn.model_selection import train_test_split
 import pandas as pd
-import random
 
 
-DATASET_PATH = "/home/ythepaut/Documents/Enseignement/MASTER 1/S7 Smart Technologies/beta_simulator_linux/BCData2"
+DATASET_PATH = "./data/track2"
 DATASET_COLUMNS = ["center", "left", "right", "steering", "throttle", "reverse", "speed"]
 
 
@@ -163,7 +162,7 @@ def main():
     fit_model(model, x_train, y_train, x_valid, y_valid)
 
     print("Saving model...")
-    model.save("model_large.h5")
+    model.save("./out/model_track2.h5")
 
 
 if __name__ == "__main__":

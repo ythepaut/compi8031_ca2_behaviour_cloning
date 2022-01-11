@@ -23,9 +23,9 @@ def load_steering_img(data):
     for i in range(len(data)):
         indexed_data = data.iloc[i]
         center, left, right = indexed_data[0:3]
-        for side in [center, left, right]:
-            image_paths.append(os.path.join(DATASET_PATH, "IMG", side.strip()))
-            steering.append(float(indexed_data[3]))
+        for side in [(center, 0), (left, 0.15), (right, -0.15)]:
+            image_paths.append(os.path.join(DATASET_PATH, "IMG", side[0].strip()))
+            steering.append(float(indexed_data[3]) + side[1])
     image_paths = np.asarray(image_paths)
     steering = np.asarray(steering)
     return image_paths, steering
@@ -42,7 +42,7 @@ def preprocess_data():
 
     # Display sample sizes for steering
     num_bins = 25
-    samples_per_bin = 350
+    samples_per_bin = 200
 
     hist, bins = np.histogram(data["steering"], num_bins)
     center = (bins[:-1] + bins[1:]) / 2
@@ -122,8 +122,8 @@ def nvidia_model() -> Sequential:
     """
     model = Sequential()
     model.add(Convolution2D(24, (5, 5), strides=(2, 2), input_shape=(66, 200, 3), activation="elu"))
-    model.add(Convolution2D(36, (5, 5), strides=(2, 2), activation="elu"))
-    model.add(Convolution2D(48, (5, 5), strides=(2, 2), activation="elu"))
+    model.add(Convolution2D(36, (5, 5), strides=(2, 2), activation="relu"))
+    model.add(Convolution2D(48, (5, 5), strides=(2, 2), activation="relu"))
     model.add(Convolution2D(64, (3, 3), activation="elu"))
     model.add(Convolution2D(64, (3, 3), activation="elu"))
     model.add(Dropout(0.5))
@@ -142,7 +142,7 @@ def nvidia_model() -> Sequential:
 
 
 def fit_model(model: Sequential, x_train, y_train, x_valid, y_valid):
-    h = model.fit(x_train, y_train, epochs=30, validation_data=(x_valid, y_valid), batch_size=100, verbose=1, shuffle=1)
+    h = model.fit(x_train, y_train, epochs=50, validation_data=(x_valid, y_valid), batch_size=100, verbose=1, shuffle=1)
     plt.plot(h.history["loss"])
     plt.plot(h.history["val_loss"])
     plt.title("Loss")

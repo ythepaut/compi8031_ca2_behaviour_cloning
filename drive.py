@@ -44,6 +44,6 @@ def telemetry(sid, data):
 
 
 if __name__ == "__main__":
-    model = load_model("out/model_track2.h5")
+    model = load_model("out/model_track1.h5")
     app = socketio.Middleware(sio, app)
     eventlet.wsgi.server(eventlet.listen(("", 4567)), app)

@@ -11,9 +11,11 @@ from tensorflow.keras.optimizers import Adam
 from sklearn.utils import shuffle
 from sklearn.model_selection import train_test_split
 import pandas as pd
+from imgaug import augmenters as iaa
+import random
 
 
-DATASET_PATH = "./data/track2"
+DATASET_PATH = "./data/track1"
 DATASET_COLUMNS = ["center", "left", "right", "steering", "throttle", "reverse", "speed"]
 
 
@@ -42,7 +44,7 @@ def preprocess_data():
 
     # Display sample sizes for steering
     num_bins = 25
-    samples_per_bin = 200
+    samples_per_bin = 400
 
     hist, bins = np.histogram(data["steering"], num_bins)
     center = (bins[:-1] + bins[1:]) / 2
@@ -94,8 +96,84 @@ def preprocess_data():
     plt.show()
 
     # Preprocessing all images
-    x_train = np.array(list(map(preprocess_img, x_train)))
-    x_valid = np.array(list(map(preprocess_img, x_valid)))
+    x_train_gen, y_train_gen = next(batch_generator(x_train, y_train, 1, 1))
+    x_valid_gen, y_valid_gen = next(batch_generator(x_valid, y_valid, 1, 0))
+
+    # Display training image and validation image
+    fig, axs = plt.subplots(1, 2, figsize=(15, 10))
+    fig.tight_layout()
+    axs[0].imshow(x_train_gen[0])
+    axs[0].set_title("Training Image")
+    axs[1].imshow(x_valid_gen[0])
+    axs[1].set_title("Validation Image")
+    plt.show()
+
+    # Display data augmentation : zoom
+    image = image_paths[random.randint(0, 1000)]
+    original_image = mpimg.imread(image)
+    zoomed_image = zoom(original_image)
+    fig, axs = plt.subplots(1, 2, figsize=(15, 10))
+    fig.tight_layout()
+    axs[0].imshow(original_image)
+    axs[0].set_title("Original Image")
+    axs[1].imshow(zoomed_image)
+    axs[1].set_title("Zoomed Image")
+    plt.show()
+
+    # Display data augmentation : panning
+    image = image_paths[random.randint(0, 1000)]
+    original_image = mpimg.imread(image)
+    panned_image = pan(original_image)
+    fig, axs = plt.subplots(1, 2, figsize=(15, 10))
+    fig.tight_layout()
+    axs[0].imshow(original_image)
+    axs[0].set_title("Original Image")
+    axs[1].imshow(panned_image)
+    axs[1].set_title("Panned Image")
+    plt.show()
+
+    # Display data augmentation : brightness
+    image = image_paths[random.randint(0, 1000)]
+    original_image = mpimg.imread(image)
+    bright_image = img_random_brightness(original_image)
+    fig, axs = plt.subplots(1, 2, figsize=(15, 10))
+    fig.tight_layout()
+    axs[0].imshow(original_image)
+    axs[0].set_title("Original Image")
+    axs[1].imshow(bright_image)
+    axs[1].set_title("Bright Image")
+    plt.show()
+
+    # Display data augmentation : image flip
+    random_index = random.randint(0, 1000)
+    image = image_paths[random_index]
+    steering_angle = steering[random_index]
+    original_image = mpimg.imread(image)
+    flipped_image, flipped_angle = img_random_flip(original_image, steering_angle)
+    fig, axs = plt.subplots(1, 2, figsize=(15, 10))
+    fig.tight_layout()
+    axs[0].imshow(original_image)
+    axs[0].set_title("Original Image - " + "Steering Angle: " + str(steering_angle))
+    axs[1].imshow(flipped_image)
+    axs[1].set_title("Flipped Image" + "Steering Angle: " + str(flipped_angle))
+    plt.show()
+
+    # Display data augmentation : 10 random samples
+    ncols = 2
+    nrows = 10
+    fig, axs = plt.subplots(nrows, ncols, figsize=(15, 50))
+    fig.tight_layout()
+    for i in range(10):
+        rand_num = random.randint(0, len(image_paths) - 1)
+        random_image = image_paths[rand_num]
+        random_steering = steering[rand_num]
+        original_image = mpimg.imread(random_image)
+        augmented_image, steering_angle = random_augment(random_image, random_steering)
+        axs[i][0].imshow(original_image)
+        axs[i][0].set_title("Original Image")
+        axs[i][1].imshow(augmented_image)
+        axs[i][1].set_title("Augmented Image")
+    plt.show()
 
     return x_train, y_train, x_valid, y_valid
 
@@ -122,29 +200,91 @@ def nvidia_model() -> Sequential:
     """
     model = Sequential()
     model.add(Convolution2D(24, (5, 5), strides=(2, 2), input_shape=(66, 200, 3), activation="elu"))
-    model.add(Convolution2D(36, (5, 5), strides=(2, 2), activation="relu"))
-    model.add(Convolution2D(48, (5, 5), strides=(2, 2), activation="relu"))
+    model.add(Convolution2D(36, (5, 5), strides=(2, 2), activation="elu"))
+    model.add(Convolution2D(48, (5, 5), strides=(2, 2), activation="elu"))
     model.add(Convolution2D(64, (3, 3), activation="elu"))
     model.add(Convolution2D(64, (3, 3), activation="elu"))
-    model.add(Dropout(0.5))
+    # model.add(Dropout(0.5))
     model.add(Flatten())
     model.add(Dropout(0.5))
     model.add(Dense(100, activation="elu"))
-    model.add(Dropout(0.5))
+    # model.add(Dropout(0.5))
     model.add(Dense(50, activation="elu"))
-    model.add(Dropout(0.5))
+    # model.add(Dropout(0.5))
     model.add(Dense(10, activation="elu"))
-    model.add(Dropout(0.5))
+    # model.add(Dropout(0.5))
     model.add(Dense(1))
-    optimizer = Adam(learning_rate=0.001)
+    optimizer = Adam(learning_rate=0.0001)
     model.compile(loss="mse", optimizer=optimizer)
     return model
 
 
+def zoom(image_to_zoom):
+    zoom_func = iaa.Affine(scale=(1, 1.3))
+    z_image = zoom_func.augment_image(image_to_zoom)
+    return z_image
+
+
+def pan(image_to_pan):
+    pan_func = iaa.Affine(translate_percent={"x": (-0.1, 0.1), "y": (-0.1, 0.1)})
+    pan_image = pan_func.augment_image(image_to_pan)
+    return pan_image
+
+
+def img_random_brightness(image_to_brighten):
+    bright_func = iaa.Multiply((0.2, 1.2))
+    bright_image = bright_func.augment_image(image_to_brighten)
+    return bright_image
+
+
+def img_random_flip(image_to_flip, steering_angle):
+    """Flips the image vertically"""
+    flipped_image = cv2.flip(image_to_flip, 1)
+    steering_angle = -steering_angle
+    return flipped_image, steering_angle
+
+
+def random_augment(image_to_augment, steering_angle):
+    augment_image = mpimg.imread(image_to_augment)
+    if np.random.rand() < 0.5:
+        augment_image = zoom(augment_image)
+    if np.random.rand() < 0.5:
+        augment_image = pan(augment_image)
+    if np.random.rand() < 0.5:
+        augment_image = img_random_brightness(augment_image)
+    if np.random.rand() < 0.5:
+        augment_image, steering_angle = img_random_flip(augment_image, steering_angle)
+    return augment_image, steering_angle
+
+
+def batch_generator(image_paths, steering_ang, batch_size, is_training):
+    while True:
+        batch_img = []
+        batch_steering = []
+        for i in range(batch_size):
+            random_index = random.randint(0, len(image_paths)-1)
+            if is_training:
+                im, steering = random_augment(image_paths[random_index], steering_ang[random_index])
+            else:
+                im = mpimg.imread(image_paths[random_index])
+                steering = steering_ang[random_index]
+
+            im = preprocess_img(im, True)
+            batch_img.append(im)
+            batch_steering.append(steering)
+        yield np.asarray(batch_img), np.asarray(batch_steering)
+
+
 def fit_model(model: Sequential, x_train, y_train, x_valid, y_valid):
-    h = model.fit(x_train, y_train, epochs=50, validation_data=(x_valid, y_valid), batch_size=100, verbose=1, shuffle=1)
+    h = model.fit(batch_generator(x_train, y_train, 100, 1), steps_per_epoch=100,
+                  epochs=20,
+                  validation_data=batch_generator(x_valid, y_valid, 100, 0),
+                  validation_steps=200,
+                  verbose=1,
+                  shuffle=1)
     plt.plot(h.history["loss"])
     plt.plot(h.history["val_loss"])
+    plt.legend(["training", "validation"])
     plt.title("Loss")
     plt.xlabel("Epoch")
     plt.show()
@@ -162,7 +302,7 @@ def main():
     fit_model(model, x_train, y_train, x_valid, y_valid)
 
     print("Saving model...")
-    model.save("./out/model_track2.h5")
+    model.save("./out/model_track1.h5")
 
 
 if __name__ == "__main__":

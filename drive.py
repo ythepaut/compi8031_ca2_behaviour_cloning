@@ -9,7 +9,7 @@ import numpy as np
 
 from behaviouralCloning import preprocess_img
 
-SPEED_LIMIT = 20
+SPEED_LIMIT = 35
 
 sio = socketio.Server()
 app = Flask(__name__)
@@ -35,7 +35,7 @@ def telemetry(sid, data):
         image = np.asarray(image)
         image = preprocess_img(image, True)
         image = np.array([image])
-        speed = float(data['speed'])
+        speed = float(data["speed"])
         throttle = 1.0 - speed / SPEED_LIMIT
         steering_angle = float(model.predict(image))
         send_control(steering_angle, throttle)
@@ -44,6 +44,6 @@ def telemetry(sid, data):
 
 
 if __name__ == "__main__":
-    model = load_model("out/model_track1.h5")
+    model = load_model("out/model.h5")
     app = socketio.Middleware(sio, app)
     eventlet.wsgi.server(eventlet.listen(("", 4567)), app)

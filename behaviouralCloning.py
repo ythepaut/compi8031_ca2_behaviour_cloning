@@ -15,27 +15,27 @@ from imgaug import augmenters as iaa
 import random
 
 
-DATASET_PATH = "./data/track1"
+DATASET_PATHS = ["./data/track1", "./data/track2"]
 DATASET_COLUMNS = ["center", "left", "right", "steering", "throttle", "reverse", "speed"]
 
 
-def load_steering_img(data):
+def load_steering_img(data: np.ndarray, dataset_path: str):
     image_paths = []
     steering = []
     for i in range(len(data)):
         indexed_data = data.iloc[i]
         center, left, right = indexed_data[0:3]
         for side in [(center, 0), (left, 0.15), (right, -0.15)]:
-            image_paths.append(os.path.join(DATASET_PATH, "IMG", side[0].strip()))
+            image_paths.append(os.path.join(dataset_path, "IMG", side[0].strip()))
             steering.append(float(indexed_data[3]) + side[1])
     image_paths = np.asarray(image_paths)
     steering = np.asarray(steering)
     return image_paths, steering
 
 
-def preprocess_data():
+def preprocess_data(dataset_path: str):
     # Load data
-    data = pd.read_csv(os.path.join(DATASET_PATH, "driving_log.csv"), names=DATASET_COLUMNS)
+    data = pd.read_csv(os.path.join(dataset_path, "driving_log.csv"), names=DATASET_COLUMNS)
     pd.set_option("max_columns", len(DATASET_COLUMNS))
 
     # Keep filename in paths
@@ -46,6 +46,7 @@ def preprocess_data():
     num_bins = 25
     samples_per_bin = 400
 
+    # Display steering repartition
     hist, bins = np.histogram(data["steering"], num_bins)
     center = (bins[:-1] + bins[1:]) / 2
     plt.bar(center, hist, width=0.05)
@@ -68,7 +69,7 @@ def preprocess_data():
     plt.show()
 
     # Load images
-    image_paths, steering = load_steering_img(data)
+    image_paths, steering = load_steering_img(data, dataset_path)
 
     # Create training and validation sets
     x_train, x_valid, y_train, y_valid = train_test_split(image_paths, steering, test_size=0.2, random_state=6)
@@ -291,18 +292,19 @@ def fit_model(model: Sequential, x_train, y_train, x_valid, y_valid):
 
 
 def main():
-    print("Preprocessing...")
-    x_train, y_train, x_valid, y_valid = preprocess_data()
-
     print("Building model...")
     model = nvidia_model()
     print(model.summary())
 
-    print("Fitting model...")
-    fit_model(model, x_train, y_train, x_valid, y_valid)
+    for dataset_path in DATASET_PATHS:
+        print(f"Preprocessing dataset \"{dataset_path}\"...")
+        x_train, y_train, x_valid, y_valid = preprocess_data(dataset_path)
+
+        print("Fitting model...")
+        fit_model(model, x_train, y_train, x_valid, y_valid)
 
     print("Saving model...")
-    model.save("./out/model_track1.h5")
+    model.save("./out/model.h5")
 
 
 if __name__ == "__main__":

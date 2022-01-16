@@ -24,7 +24,7 @@ def send_control(steering_angle, throttle):
 
 @sio.on("connect")
 def connect(sid, env):
-    print('Connected')
+    print("Connected")
     send_control(0, 0)
 
 

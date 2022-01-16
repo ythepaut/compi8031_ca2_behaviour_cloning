@@ -15,7 +15,7 @@ from imgaug import augmenters as iaa
 import random
 
 
-DATASET_PATHS = ["./data/track1", "./data/track2"]
+DATASET_PATHS = ["./data/track1_5laps", "./data/track1_3laps"]
 DATASET_COLUMNS = ["center", "left", "right", "steering", "throttle", "reverse", "speed"]
 
 
@@ -216,7 +216,7 @@ def nvidia_model() -> Sequential:
     # model.add(Dropout(0.5))
     model.add(Dense(1))
     optimizer = Adam(learning_rate=0.0001)
-    model.compile(loss="mse", optimizer=optimizer)
+    model.compile(loss="mse", optimizer=optimizer, metrics=["accuracy"])
     return model
 
 
@@ -285,7 +285,8 @@ def fit_model(model: Sequential, x_train, y_train, x_valid, y_valid):
                   shuffle=1)
     plt.plot(h.history["loss"])
     plt.plot(h.history["val_loss"])
-    plt.legend(["training", "validation"])
+    plt.plot(h.history["accuracy"])
+    plt.legend(["training", "validation", "accuracy"])
     plt.title("Loss")
     plt.xlabel("Epoch")
     plt.show()

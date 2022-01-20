@@ -9,7 +9,7 @@ import numpy as np
 
 from behaviouralCloning import preprocess_img
 
-SPEED_LIMIT = 35
+SPEED_LIMIT = 25
 
 sio = socketio.Server()
 app = Flask(__name__)
@@ -44,6 +44,8 @@ def telemetry(sid, data):
 
 
 if __name__ == "__main__":
-    model = load_model("out/model.h5")
+    print("Loading model...")
+    model = load_model("out/model_hsv_large_track2.h5")
+    print("Starting server...")
     app = socketio.Middleware(sio, app)
     eventlet.wsgi.server(eventlet.listen(("", 4567)), app)

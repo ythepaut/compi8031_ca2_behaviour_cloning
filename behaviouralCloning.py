@@ -15,27 +15,27 @@ from imgaug import augmenters as iaa
 import random
 
 
-DATASET_PATHS = ["./data/track1_5laps", "./data/track1_3laps"]
+DATASETS = [("./data/track1_3laps", 400), ("./data/track1_5laps", 500), ("./data/track1_20laps_smooth", 4000), ("./data/track2_shadow_part", 100)]
 DATASET_COLUMNS = ["center", "left", "right", "steering", "throttle", "reverse", "speed"]
 
 
-def load_steering_img(data: np.ndarray, dataset_path: str):
+def load_steering_img(data: np.ndarray, dataset: tuple[str, int]):
     image_paths = []
     steering = []
     for i in range(len(data)):
         indexed_data = data.iloc[i]
         center, left, right = indexed_data[0:3]
         for side in [(center, 0), (left, 0.15), (right, -0.15)]:
-            image_paths.append(os.path.join(dataset_path, "IMG", side[0].strip()))
+            image_paths.append(os.path.join(dataset[0], "IMG", side[0].strip()))
             steering.append(float(indexed_data[3]) + side[1])
     image_paths = np.asarray(image_paths)
     steering = np.asarray(steering)
     return image_paths, steering
 
 
-def preprocess_data(dataset_path: str):
+def preprocess_data(dataset: tuple[str, int]):
     # Load data
-    data = pd.read_csv(os.path.join(dataset_path, "driving_log.csv"), names=DATASET_COLUMNS)
+    data = pd.read_csv(os.path.join(dataset[0], "driving_log.csv"), names=DATASET_COLUMNS)
     pd.set_option("max_columns", len(DATASET_COLUMNS))
 
     # Keep filename in paths
@@ -44,7 +44,7 @@ def preprocess_data(dataset_path: str):
 
     # Display sample sizes for steering
     num_bins = 25
-    samples_per_bin = 400
+    samples_per_bin = dataset[1]
 
     # Display steering repartition
     hist, bins = np.histogram(data["steering"], num_bins)
@@ -69,7 +69,7 @@ def preprocess_data(dataset_path: str):
     plt.show()
 
     # Load images
-    image_paths, steering = load_steering_img(data, dataset_path)
+    image_paths, steering = load_steering_img(data, dataset)
 
     # Create training and validation sets
     x_train, x_valid, y_train, y_valid = train_test_split(image_paths, steering, test_size=0.2, random_state=6)
@@ -110,7 +110,7 @@ def preprocess_data(dataset_path: str):
     plt.show()
 
     # Display data augmentation : zoom
-    image = image_paths[random.randint(0, 1000)]
+    image = image_paths[random.randint(0, len(image_paths))]
     original_image = mpimg.imread(image)
     zoomed_image = zoom(original_image)
     fig, axs = plt.subplots(1, 2, figsize=(15, 10))
@@ -122,7 +122,7 @@ def preprocess_data(dataset_path: str):
     plt.show()
 
     # Display data augmentation : panning
-    image = image_paths[random.randint(0, 1000)]
+    image = image_paths[random.randint(0, len(image_paths))]
     original_image = mpimg.imread(image)
     panned_image = pan(original_image)
     fig, axs = plt.subplots(1, 2, figsize=(15, 10))
@@ -134,7 +134,7 @@ def preprocess_data(dataset_path: str):
     plt.show()
 
     # Display data augmentation : brightness
-    image = image_paths[random.randint(0, 1000)]
+    image = image_paths[random.randint(0, len(image_paths))]
     original_image = mpimg.imread(image)
     bright_image = img_random_brightness(original_image)
     fig, axs = plt.subplots(1, 2, figsize=(15, 10))
@@ -145,8 +145,20 @@ def preprocess_data(dataset_path: str):
     axs[1].set_title("Bright Image")
     plt.show()
 
+    # Display data augmentation : shadow
+    image = image_paths[random.randint(0, len(image_paths))]
+    original_image = mpimg.imread(image)
+    shadow_image = img_random_shadow(original_image)
+    fig, axs = plt.subplots(1, 2, figsize=(15, 10))
+    fig.tight_layout()
+    axs[0].imshow(original_image)
+    axs[0].set_title("Original Image")
+    axs[1].imshow(shadow_image)
+    axs[1].set_title("Image with shadow")
+    plt.show()
+
     # Display data augmentation : image flip
-    random_index = random.randint(0, 1000)
+    random_index = random.randint(0, len(image_paths))
     image = image_paths[random_index]
     steering_angle = steering[random_index]
     original_image = mpimg.imread(image)
@@ -184,8 +196,8 @@ def preprocess_img(img, is_np=False):
         img = mpimg.imread(img)
     # Crop image
     img = img[60:135, :, :]
-    # Convert color to yuv
-    img = cv2.cvtColor(img, cv2.COLOR_RGB2YUV)
+    # Convert color to hsv
+    img = cv2.cvtColor(img, cv2.COLOR_RGB2HSV)
     # Apply gaussian blur
     img = cv2.GaussianBlur(img, (3, 3), 0)
     # Resize image
@@ -238,6 +250,17 @@ def img_random_brightness(image_to_brighten):
     return bright_image
 
 
+def img_random_shadow(image):
+    image_with_shadow = image.copy()
+    a = 1 if np.random.rand() >= 0.5 else -1
+    b = round(np.random.rand() * 40) - 20
+    for x in range(image_with_shadow.shape[0]):
+        for y in range(image_with_shadow.shape[1]):
+            if x * 2 * a + 40 + b < y:
+                image_with_shadow[x, y] = image_with_shadow[x, y] * 0.4
+    return image_with_shadow
+
+
 def img_random_flip(image_to_flip, steering_angle):
     """Flips the image vertically"""
     flipped_image = cv2.flip(image_to_flip, 1)
@@ -253,6 +276,8 @@ def random_augment(image_to_augment, steering_angle):
         augment_image = pan(augment_image)
     if np.random.rand() < 0.5:
         augment_image = img_random_brightness(augment_image)
+    if np.random.rand() < 0.5:
+        augment_image = img_random_shadow(augment_image)
     if np.random.rand() < 0.5:
         augment_image, steering_angle = img_random_flip(augment_image, steering_angle)
     return augment_image, steering_angle
@@ -297,15 +322,15 @@ def main():
     model = nvidia_model()
     print(model.summary())
 
-    for dataset_path in DATASET_PATHS:
-        print(f"Preprocessing dataset \"{dataset_path}\"...")
-        x_train, y_train, x_valid, y_valid = preprocess_data(dataset_path)
+    for dataset in DATASETS:
+        print(f"Preprocessing dataset \"{dataset[0]}\"...")
+        x_train, y_train, x_valid, y_valid = preprocess_data(dataset)
 
         print("Fitting model...")
         fit_model(model, x_train, y_train, x_valid, y_valid)
 
     print("Saving model...")
-    model.save("./out/model.h5")
+    model.save("./out/model_hsv_large_track2.h5")
 
 
 if __name__ == "__main__":

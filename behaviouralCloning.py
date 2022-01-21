@@ -15,7 +15,12 @@ from imgaug import augmenters as iaa
 import random
 
 
-DATASETS = [("./data/track1_3laps", 400), ("./data/track1_5laps", 500), ("./data/track1_20laps_smooth", 4000), ("./data/track2_shadow_part", 100)]
+DATASETS = [
+    ("./data/track1_3laps", 400),
+    ("./data/track1_5laps", 500),
+    ("./data/track1_20laps_smooth", 4000),
+    ("./data/track2_shadow_part", 100),
+    ("./data/track2", 500)]
 DATASET_COLUMNS = ["center", "left", "right", "steering", "throttle", "reverse", "speed"]
 
 
@@ -217,15 +222,11 @@ def nvidia_model() -> Sequential:
     model.add(Convolution2D(48, (5, 5), strides=(2, 2), activation="elu"))
     model.add(Convolution2D(64, (3, 3), activation="elu"))
     model.add(Convolution2D(64, (3, 3), activation="elu"))
-    # model.add(Dropout(0.5))
     model.add(Flatten())
     model.add(Dropout(0.5))
     model.add(Dense(100, activation="elu"))
-    # model.add(Dropout(0.5))
     model.add(Dense(50, activation="elu"))
-    # model.add(Dropout(0.5))
     model.add(Dense(10, activation="elu"))
-    # model.add(Dropout(0.5))
     model.add(Dense(1))
     optimizer = Adam(learning_rate=0.0001)
     model.compile(loss="mse", optimizer=optimizer, metrics=["accuracy"])
@@ -252,12 +253,15 @@ def img_random_brightness(image_to_brighten):
 
 def img_random_shadow(image):
     image_with_shadow = image.copy()
-    a = 1 if np.random.rand() >= 0.5 else -1
-    b = round(np.random.rand() * 40) - 20
-    for x in range(image_with_shadow.shape[0]):
-        for y in range(image_with_shadow.shape[1]):
-            if x * 2 * a + 40 + b < y:
-                image_with_shadow[x, y] = image_with_shadow[x, y] * 0.4
+
+    b = np.random.uniform(45, 115)
+    a = (image.shape[0] // 2 - b) / (image.shape[1] // 2)
+    above = np.random.rand() > 0.5
+
+    for x in range(image_with_shadow.shape[1]):
+        for y in range(image_with_shadow.shape[0]):
+            if (a * x + b < y and above) or (a * x + b > y and not above):
+                image_with_shadow[y, x] = image_with_shadow[y, x] * 0.4
     return image_with_shadow
 
 
@@ -330,7 +334,7 @@ def main():
         fit_model(model, x_train, y_train, x_valid, y_valid)
 
     print("Saving model...")
-    model.save("./out/model_hsv_large_track2.h5")
+    model.save("./out/model_hsv_track2.h5")
 
 
 if __name__ == "__main__":

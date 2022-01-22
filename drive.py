@@ -45,7 +45,7 @@ def telemetry(sid, data):
 
 if __name__ == "__main__":
     print("Loading model...")
-    model = load_model("out/model_hsv_track1-20_shadow-v2_7000-bins.h5")
+    model = load_model("out/model_hsv_track1-20_track2_50epochs.h5")
     print("Starting server...")
     app = socketio.Middleware(sio, app)
     eventlet.wsgi.server(eventlet.listen(("", 4567)), app)

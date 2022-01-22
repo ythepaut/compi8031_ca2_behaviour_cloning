@@ -307,7 +307,7 @@ def batch_generator(image_paths, steering_ang, batch_size, is_training):
 
 def fit_model(model: Sequential, x_train, y_train, x_valid, y_valid):
     h = model.fit(batch_generator(x_train, y_train, 100, 1), steps_per_epoch=100,
-                  epochs=20,
+                  epochs=50,
                   validation_data=batch_generator(x_valid, y_valid, 100, 0),
                   validation_steps=200,
                   verbose=1,
@@ -334,7 +334,7 @@ def main():
         fit_model(model, x_train, y_train, x_valid, y_valid)
 
     print("Saving model...")
-    model.save("./out/model_hsv_track2.h5")
+    model.save("./out/model_hsv_track1-20_50epochs.h5")
 
 
 if __name__ == "__main__":

@@ -41,7 +41,7 @@ In tested order :
 | model_hsv_track1-20_50epochs            | HSV                   | track1_20laps_smooth                                     | Yes (f1e397d version) | With 50 epochs                                                                       | Drives perfectly, completes multiple laps at full speed | Manage to drive on the road for the first seconds then crashes on the first turn |
 | model_hsv_track1-20_track2_50epochs     | HSV                   | track1_20laps_smooth, track2                             | Yes (f1e397d version) | With 50 epochs                                                                       | Exits the road just before the bridge                   | Drives okay (20mph limit), completes multiple laps                               |
 
-Best model for track 1 : `model_hsv_large_shadow.h5`, maximum speed.
+Best model for track 1 : `model_hsv_track1-20_shadow-v2.h5`, maximum speed.
 
 Best model for track 2 : `model_hsv_track1-20_track2_50epochs.h5`, 20mph speed limit.
 
